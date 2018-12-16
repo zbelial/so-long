@@ -523,6 +523,8 @@ If nil, no mode line indicator will be displayed."
 (defvar-local so-long--inhibited nil) ; internal use
 (put 'so-long--inhibited 'permanent-local t)
 
+(defvar so-long--set-auto-mode nil) ; internal use
+
 (defvar-local so-long-original-values nil
   "Alist holding the buffer's original `major-mode' value, and other data.
 
@@ -800,7 +802,7 @@ type \\[so-long-mode-revert], or else re-invoke it manually."
   ;; Hide redundant mode-line information.
   (setq so-long-mode-line-info nil)
   ;; Inform the user about our major mode hijacking.
-  (unless so-long--inhibited
+  (unless (or so-long--inhibited so-long--set-auto-mode)
     (message (concat "Changed to %s (from %s)"
                      (unless (memq this-command '(so-long so-long-mode))
                        " on account of line length")
@@ -1024,7 +1026,8 @@ major mode is a member (or derivative of a member) of `so-long-target-modes'.
   (setq so-long--inhibited nil) ; is permanent-local
   (when so-long-enabled
     (so-long-check-header-modes)) ; may set `so-long--inhibited'
-  ad-do-it ; `set-auto-mode'      ; may set `so-long--inhibited'
+  (let ((so-long--set-auto-mode t))
+    ad-do-it) ; `set-auto-mode'   ; may set `so-long--inhibited'
   ;; Test the new major mode for long lines.
   (when so-long-enabled
     (unless so-long--inhibited
