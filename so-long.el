@@ -23,6 +23,18 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+;;; TODO
+;;
+;; * For actions other than `so-long-mode', I think the mode line ought to
+;; indicate when so-long has done something, and hence when `so-long-revert' is
+;; available.  This needn't mean a `so-long-minor-mode', but maybe that would be
+;; better?
+;;
+;; * If `set-auto-mode' actually selects `so-long-mode' it would be nice if
+;; we didn't display the "on account of line length" message in `so-long-mode'.
+;; e.g.: (add-to-list 'auto-mode-alist '("\\.so-long\\'" . so-long-mode))
+
+
 ;;; Commentary:
 ;;
 ;; When the lines in a buffer are so long that performance could suffer to an
