@@ -497,6 +497,11 @@ they are in Emacs core, GNU ELPA, or elsewhere."
 (defvar-local so-long--inhibited nil) ; internal use
 (put 'so-long--inhibited 'permanent-local t)
 
+(defvar-local so-long-mode-line-info nil
+  "Mode line construct for when `so-long' has been triggered.
+
+Displayed as part of `mode-line-misc-info'.")
+
 (defvar-local so-long-original-values nil
   "Alist holding the buffer's original `major-mode' value, and other data.
 
@@ -657,6 +662,8 @@ type \\[so-long-mode-revert], or else re-invoke it manually."
   ;; set variables here in order to cover cases where the setting of a variable
   ;; influences how a global minor mode behaves in this buffer.
   (so-long-override-variables)
+  ;; Hide redundant mode-line information.
+  (setq so-long-mode-line-info nil)
   ;; Inform the user about our major mode hijacking.
   (unless so-long--inhibited
     (message (concat "Changed to %s (from %s)"
@@ -907,6 +914,9 @@ major mode is a member (or derivative of a member) of `so-long-target-modes'.
   ;; Call the configured `so-long-function'.
   (when (functionp so-long-function)
     (funcall so-long-function))
+  ;; Update mode line (ignoring `so-long-mode' which is already obvious).
+  (unless (eq so-long-function 'so-long-mode)
+    (setq so-long-mode-line-info "So Long "))
   ;; Run `so-long-hook'.
   ;; By default we set `buffer-read-only', which can cause problems if hook
   ;; functions need to modify the buffer.  We use `inhibit-read-only' to
@@ -919,6 +929,7 @@ major mode is a member (or derivative of a member) of `so-long-target-modes'.
   (interactive)
   (when (functionp so-long-revert-function)
     (funcall so-long-revert-function))
+  (setq so-long-mode-line-info nil)
   (let ((inhibit-read-only t))
     (run-hooks 'so-long-revert-hook)))
 
@@ -931,6 +942,7 @@ major mode is a member (or derivative of a member) of `so-long-target-modes'.
   (ad-enable-advice 'set-auto-mode 'around 'so-long--set-auto-mode)
   (ad-activate 'hack-local-variables)
   (ad-activate 'set-auto-mode)
+  (add-to-list 'mode-line-misc-info '("" so-long-mode-line-info))
   (setq so-long-enabled t))
 
 (defun so-long-disable ()
@@ -941,6 +953,8 @@ major mode is a member (or derivative of a member) of `so-long-target-modes'.
   (ad-disable-advice 'set-auto-mode 'around 'so-long--set-auto-mode)
   (ad-activate 'hack-local-variables)
   (ad-activate 'set-auto-mode)
+  (setq mode-line-misc-info
+        (delete '("" so-long-mode-line-info) mode-line-misc-info))
   (setq so-long-enabled nil))
 
 (defun so-long-unload-function ()
