@@ -503,16 +503,23 @@ they are in Emacs core, GNU ELPA, or elsewhere."
   :package-version '(so-long . "1.0")
   :group 'so-long)
 
+(defcustom so-long-mode-line-label "So Long"
+  "Text label of the mode line indicator when long lines are detected.
+
+If nil, no mode line indicator will be displayed."
+  :type '(choice (string :tag "String")
+                 (const :tag "None" nil))
+  :package-version '(so-long . "1.0")
+  :group 'so-long)
+
 (defvar so-long-enabled t
   "Set to nil to prevent `so-long-function' from being triggered.")
 
+(defvar-local so-long--active nil
+  "Non-nil when `so-long' mitigations are in effect.")
+
 (defvar-local so-long--inhibited nil) ; internal use
 (put 'so-long--inhibited 'permanent-local t)
-
-(defvar-local so-long-mode-line-info nil
-  "Mode line construct for when `so-long' has been triggered.
-
-Displayed as part of `mode-line-misc-info'.")
 
 (defvar-local so-long-original-values nil
   "Alist holding the buffer's original `major-mode' value, and other data.
@@ -553,11 +560,92 @@ Called by default during `change-major-mode-hook'."
               (eq major-mode 'so-long-mode))
     (so-long-remember 'major-mode)))
 
+;; (info "(elisp) Menu Example")
+
+(defun so-long-mode-line-menu ()
+  "Keymap for `so-long-mode-line-info'."
+  (let ((map (make-sparse-keymap "So Long")))
+    ;; (set-keymap-parent map (current-global-map))
+    ;; (define-key map (kbd "<mode-line> <mouse-1>") 'forward-word)
+    ;;
+    ;; (define-key map [menu-bar so-long]
+    ;;   (cons "So Long" (make-sparse-keymap "So Long")))
+    ;;
+    ;; (define-key map [menu-bar so-long hide-all]
+    ;;   '(menu-item "Hide All" dired-hide-all
+	;; 	          :help "Hide all subdirectories, leave only header lines"))
+
+    (define-key-after map [so-long-revert]
+      '(menu-item "Revert action" so-long-revert
+                  :enable (and so-long-revert-function
+                               so-long--active)
+                  :help "Remove long-line mitigations in this buffer"))
+
+    (define-key-after map [so-long-actions-separator]
+      '(menu-item "--"))
+
+    (dolist (item so-long-action-alist)
+      (cl-destructuring-bind (key label actionfunc revertfunc)
+          item
+        (define-key-after map (vector key)
+          `(menu-item
+            ,label (lambda ()
+                     (interactive)
+                     (so-long-replace-action ',item))
+            :enable (not (and so-long--active
+                              (eq ',actionfunc so-long-function)
+                              (eq ',revertfunc so-long-revert-function)))
+            ))))
+
+    map))
+
+(defvar so-long-mode-line-info-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "<mode-line> <down-mouse-1>")
+      `(menu-item "" nil
+                  :filter ,(lambda (_cmd)
+                             (so-long-mode-line-menu))))
+    map)
+  "Keymap to open the so-long menu in the mode line.")
+
+(defvar-local so-long-mode-line-info nil
+  "Mode line construct for when `so-long' has been triggered.
+
+Displayed as part of `mode-line-misc-info'.")
+
+;; Ensure we can display text properties on this value in the mode line.
+;; See (info "(elisp) Mode Line Data") or (info "(elisp) Properties in Mode").
+(put 'so-long-mode-line-info 'risky-local-variable t)
+
+(defun so-long-mode-line-info ()
+  "Returns the `so-long-mode-line-info' mode line construct."
+  ;; n.b. It's necessary for `so-long-mode-line-info' to have a
+  ;; non-nil risky-local-variable property, as otherwise the text
+  ;; properties will not be rendered.
+  ;; i.e. (put 'so-long-mode-line-info 'risky-local-variable t)
+  '(so-long-mode-line-label
+    ("" (:eval (propertize so-long-mode-line-label
+                           'mouse-face 'highlight
+                           'keymap so-long-mode-line-info-map
+                           'help-echo t ;; Suppress the mode-line value
+                           'face (if so-long--active
+                                     'mode-line-emphasis
+                                   'mode-line)))
+     " ")))
+
+;; Modes that go slowly and line lengths excessive
+;; Font-lock performance becoming oppressive
+;; All of my CPU tied up with strings
+;; These are a few of my least favourite things
+;;
 ;; When the line's long
 ;; When the mode's slow
 ;; When Emacs is sad
 ;; We change automatically to faster code
 ;; And then I won't feel so mad
+
+(defvar-local so-long-line-detected-p nil
+  "Non-nil when long lines have been detected.")
 
 (defun so-long-line-detected-p ()
   "Following any initial comments and blank lines, the next N lines of the
@@ -619,6 +707,8 @@ want to increase `so-long-max-lines' to allow for possible comments."
           (unless (or (bolp)
                       (and (eobp) (<= (- (point) start)
                                       so-long-threshold)))
+            (setq so-long-line-detected-p t)
+            (so-long-menu-add)
             (throw 'excessive t))
           (setq count (1+ count)))))))
 
@@ -636,6 +726,11 @@ This is a `so-long-function' option."
 This is a `so-long-function' option."
   (so-long-disable-minor-modes)
   (so-long-override-variables))
+
+;; How do you solve a problem like a long line?
+;; How do you stop a mode from slowing down?
+;; How do you cope with processing a long line?
+;; A bit of advice! A mode! A workaround!
 
 (define-derived-mode so-long-mode nil "So long"
   "This major mode is the default `so-long-function' option.
@@ -775,6 +870,17 @@ Re-process local variables, and restore overridden variables and minor modes."
           (longlines-mode (if (cadr state) 1 -1)))
       (longlines-mode -1))))
 
+(defun so-long-replace-action (replacement)
+  "Revert the current action and invoke the specified action."
+  (interactive)
+  (when so-long--active
+    (so-long-revert))
+  (cl-destructuring-bind (key label actionfunc revertfunc)
+      replacement
+    (setq so-long-function actionfunc)
+    (setq so-long-revert-function revertfunc)
+    (so-long)))
+
 (defun so-long-mode-downgrade (&optional mode)
   "The default value for `so-long-file-local-mode-function'.
 
@@ -860,10 +966,14 @@ function defined by `so-long-file-local-mode-function'."
     (when modes
       (so-long-handle-file-local-mode (car (last modes))))))
 
-;; How do you solve a problem like a long line?
-;; How do you stop a mode from slowing down?
-;; How do you cope with processing a long line?
-;; A bit of advice! A mode! A workaround!
+;; Lisp advice, Lisp advice
+;; Every funcall you greet me
+;; Code of mine, redefined
+;; You look happy to tweak me
+;; After we load may you fuse our code
+;; Fuse our code together
+;; Lisp advice, Lisp advice
+;; Blend our features forever
 
 (defadvice hack-local-variables (after so-long--file-local-mode disable)
   "Ensure that `so-long' defers to file-local mode declarations if necessary.
@@ -912,6 +1022,7 @@ major mode is a member (or derivative of a member) of `so-long-target-modes'.
 (defun so-long ()
   "Invoke `so-long-function' and run `so-long-hook'."
   (interactive)
+  (setq so-long-line-detected-p t)
   (unless so-long-function
     (setq so-long-function (so-long-function)))
   (unless so-long-revert-function
@@ -925,10 +1036,11 @@ major mode is a member (or derivative of a member) of `so-long-target-modes'.
       (so-long-remember mode)))
   ;; Call the configured `so-long-function'.
   (when (functionp so-long-function)
+    (setq so-long--active t)
     (funcall so-long-function))
   ;; Update mode line (ignoring `so-long-mode' which is already obvious).
   (unless (eq so-long-function 'so-long-mode)
-    (setq so-long-mode-line-info "So Long "))
+    (setq so-long-mode-line-info (so-long-mode-line-info)))
   ;; Run `so-long-hook'.
   ;; By default we set `buffer-read-only', which can cause problems if hook
   ;; functions need to modify the buffer.  We use `inhibit-read-only' to
@@ -940,8 +1052,8 @@ major mode is a member (or derivative of a member) of `so-long-target-modes'.
   "Invoke `so-long-revert-function' and run `so-long-revert-hook'."
   (interactive)
   (when (functionp so-long-revert-function)
+    (setq so-long--active nil)
     (funcall so-long-revert-function))
-  (setq so-long-mode-line-info nil)
   (let ((inhibit-read-only t))
     (run-hooks 'so-long-revert-hook)))
 
@@ -955,6 +1067,11 @@ major mode is a member (or derivative of a member) of `so-long-target-modes'.
   (ad-activate 'hack-local-variables)
   (ad-activate 'set-auto-mode)
   (add-to-list 'mode-line-misc-info '("" so-long-mode-line-info))
+  (define-key-after (current-global-map) [menu-bar so-long]
+    `(menu-item "So Long" nil
+                :visible so-long-line-detected-p
+                :filter ,(lambda (_cmd)
+                           (so-long-mode-line-menu))))
   (setq so-long-enabled t))
 
 (defun so-long-disable ()
@@ -967,6 +1084,7 @@ major mode is a member (or derivative of a member) of `so-long-target-modes'.
   (ad-activate 'set-auto-mode)
   (setq mode-line-misc-info
         (delete '("" so-long-mode-line-info) mode-line-misc-info))
+  (define-key (current-global-map) [menu-bar so-long] nil)
   (setq so-long-enabled nil))
 
 (defun so-long-unload-function ()
