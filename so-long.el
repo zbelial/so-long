@@ -435,6 +435,16 @@ Note that in the special case when the file-local mode is `so-long-mode', the
   :group 'so-long)
 (make-variable-buffer-local 'so-long-file-local-mode-function)
 
+;; `provided-mode-derived-p' was added in 26.1
+(unless (fboundp 'provided-mode-derived-p)
+  (defun provided-mode-derived-p (mode &rest modes)
+    "Non-nil if MODE is derived from one of MODES.
+Uses the `derived-mode-parent' property of the symbol to trace backwards.
+If you just want to check `major-mode', use `derived-mode-p'."
+    (while (and (not (memq mode modes))
+                (setq mode (get mode 'derived-mode-parent))))
+    mode))
+
 (defun so-long-handle-file-local-mode (mode)
   "Wrapper for calling `so-long-file-local-mode-function'.
 
@@ -443,7 +453,7 @@ was established."
   ;; Handle the special case whereby the file-local mode was `so-long-mode'.
   ;; In this instance we set `so-long--inhibited', because the file-local mode
   ;; is already going to do everything that is wanted.
-  (if (eq mode 'so-long-mode)
+  (if (provided-mode-derived-p mode 'so-long-mode)
       (setq so-long--inhibited t)
     ;; Call `so-long-file-local-mode-function'.
     (when (functionp so-long-file-local-mode-function)
@@ -583,7 +593,7 @@ even when invoked interactively.
 
 Called by default during `change-major-mode-hook'."
   (unless (or (minibufferp)
-              (eq major-mode 'so-long-mode))
+              (derived-mode-p 'so-long-mode))
     (so-long-remember 'major-mode)))
 
 (defun so-long-menu ()
@@ -940,7 +950,12 @@ we set it buffer-locally to `so-long-revert-function-overrides-only'.
 
 If `so-long-function' has any value other than `so-long-mode', we do nothing, as
 if `so-long-file-local-mode-function' was nil."
-  (when (eq (so-long-function) 'so-long-mode)
+  ;; n.b. We use `provided-mode-derived-p' here, but we have no equivalent for
+  ;; the revert function, and therefore this may or may not be a valid downgrade
+  ;; function if we are dealing with a mode derived from `so-long-mode'.  (If it
+  ;; isn't valid, then a custom downgrade function should be used instead.)
+  (when (and (symbolp (so-long-function))
+             (provided-mode-derived-p (so-long-function) 'so-long-mode))
     ;; Downgrade from `so-long-mode' to `so-long-function-overrides-only'.
     (setq so-long-function 'so-long-function-overrides-only))
   ;; Likewise, downgrade from `so-long-mode-revert'.
@@ -1123,7 +1138,8 @@ These local variables will thus not vanish on setting a major mode."
         (funcall so-long-function)
         (setq so-long--active t))
       ;; Update mode line (ignoring `so-long-mode' which is already obvious).
-      (unless (eq so-long-function 'so-long-mode)
+      (unless (and (symbolp so-long-function)
+                   (provided-mode-derived-p so-long-function 'so-long-mode))
         (setq so-long-mode-line-info (so-long-mode-line-info)))
       ;; Run `so-long-hook'.
       ;; By default we set `buffer-read-only', which can cause problems if hook
