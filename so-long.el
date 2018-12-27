@@ -620,8 +620,8 @@ is selected, so we need to make sure we are acting on the correct buffer."
   ;; Refer to (info "(elisp) Click Events") regarding the form of the mouse
   ;; position list for clicks in the mode line."
   (or (and (mouse-event-p last-nonmenu-event)
-           (windowp (caadr last-nonmenu-event))
-           (caadr last-nonmenu-event))
+           (windowp (car (cadr last-nonmenu-event)))
+           (car (cadr last-nonmenu-event)))
       (selected-window)))
 
 (defun so-long-menu-item-revert ()
