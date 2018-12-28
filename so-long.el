@@ -25,7 +25,7 @@
 
 ;;; Commentary:
 ;;
-;; When the lines in a buffer are so long that performance could suffer to an
+;; When the lines in a file are so long that performance could suffer to an
 ;; unacceptable degree, we say "so long" to the slow modes and options enabled
 ;; in that buffer, and invoke something much more basic in their place.
 ;;
@@ -47,7 +47,8 @@
 ;; in such cases will rarely be an issue.  However, should the user wish to do
 ;; so, the original mode may be reinstated easily in any given buffer using
 ;; `so-long-revert' (the key binding for which is advertised when the major
-;; mode change occurs).
+;; mode change occurs).  If you prefer not to change the major mode, the
+;; `overrides-only' action can be configured.
 ;;
 ;; The user options `so-long-action' and `so-long-action-alist' determine what
 ;; will happen when `so-long' and `so-long-revert' are invoked, allowing
@@ -60,14 +61,22 @@
 ;; and so if you do need to edit the file, performance may still degrade as
 ;; you get deeper into the long lines.  In such circumstances you may find
 ;; that `longlines-mode' is the most helpful facility.
+;;
+;; Note also that the mitigations are automatically triggered when visiting a
+;; file.  The library does not automatically detect if long lines are inserted
+;; into an existing buffer (although the `so-long' command can be invoked
+;; manually in such situations).
 
 ;; Installation
 ;; ------------
-;; Put so-long.el in a directory in your load-path, and add the following to
-;; your init file:
+;; And add the following to your init file to enable the library:
 ;;
 ;; (when (require 'so-long nil :noerror)
 ;;   (so-long-enable))
+;;
+;; If necessary, ensure that so-long.el is in a directory in your load-path.
+;; (This step is not necessary if you have installed it via GNU ELPA, or if you
+;; are using Emacs 27+.)
 
 ;; Configuration
 ;; -------------
@@ -79,6 +88,10 @@
 ;; mode.  The `so-long-action' variable determines what will be done.
 ;;
 ;; You can also use M-x so-long to invoke the behaviour manually.
+;;
+;; In Emacs 26+ it is also possible to use file- or directory-local variables to
+;; configure the behaviour for particular files.  (In earlier versions of Emacs
+;; the local variables are processed too late, and hence have no effect.)
 
 ;; Actions and menus
 ;; -----------------
@@ -168,8 +181,16 @@
 
 ;; Example configuration
 ;; ---------------------
+;; If you prefer to configure in code rather than via the customize interface,
+;; then you might use something along these lines:
+;;
+;; ;; Enable so-long library.
 ;; (when (require 'so-long nil :noerror)
 ;;   (so-long-enable)
+;;   ;; Basic settings.
+;;   (setq so-long-action 'overrides-only)
+;;   (setq so-long-threshold 1000)
+;;   (setq so-long-max-lines 100)
 ;;   ;; Additional target major modes to trigger for.
 ;;   (mapc (apply-partially 'add-to-list 'so-long-target-modes)
 ;;         '(sgml-mode nxml-mode))
@@ -244,7 +265,7 @@
 ;; 0.3   - Defer to a file-local 'mode' variable.
 ;; 0.2   - Initial release to EmacsWiki.
 ;; 0.1   - Experimental.
-
+
 ;;; Code:
 
 (add-to-list 'customize-package-emacs-version-alist
@@ -1070,8 +1091,8 @@ function defined by `so-long-file-local-mode-function'."
 (defadvice hack-local-variables (after so-long--file-local-mode disable)
   "Ensure that `so-long' defers to file-local mode declarations if necessary.
 
-This advice acts after any initial MODE-ONLY call to `hack-local-variables',
-and calls `so-long-file-local-mode-function' if a file-local mode is found.
+This advice acts after the HANDLE-MODE:t call to `hack-local-variables'.
+\(MODE-ONLY in Emacs versions < 26).
 
 File-local header comments are currently an exception, and are processed by
 `so-long-check-header-modes' (see which for details).
@@ -1099,9 +1120,9 @@ major mode is a member (or derivative of a member) of `so-long-target-modes'.
 `so-long-line-detected-p' then determines whether the mode change is needed."
   (setq so-long--inhibited nil) ; is permanent-local
   (when so-long-enabled
-    (so-long-check-header-modes)) ; may set `so-long--inhibited'
+    (so-long-check-header-modes)) ; may cause `so-long--inhibited' to be set.
   (let ((so-long--set-auto-mode t))
-    ad-do-it) ; `set-auto-mode'   ; may set `so-long--inhibited'
+    ad-do-it) ; `set-auto-mode'   ; may cause `so-long--inhibited' to be set.
   ;; Test the new major mode for long lines.
   (when so-long-enabled
     (unless so-long--inhibited
