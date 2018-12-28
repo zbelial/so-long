@@ -1116,11 +1116,11 @@ major mode is a member (or derivative of a member) of `so-long-target-modes'.
   (let ((so-long--set-auto-mode t))
     ad-do-it) ; `set-auto-mode'   ; may cause `so-long--inhibited' to be set.
   ;; Test the new major mode for long lines.
-  (when so-long-enabled
-    (unless so-long--inhibited
-      (when (and (apply 'derived-mode-p so-long-target-modes)
-                 (so-long-line-detected-p))
-        (so-long)))))
+  (and so-long-enabled
+       (not so-long--inhibited)
+       (apply #'derived-mode-p so-long-target-modes)
+       (so-long-line-detected-p)
+       (so-long)))
 
 ;; n.b. Call (so-long-enable) after changes, to re-activate the advice.
 
@@ -1180,9 +1180,9 @@ These local variables will thus not vanish on setting a major mode."
         (funcall so-long-function)
         ;; Set `so-long--active' last, as it isn't permanent-local.
         (setq so-long--active t))
-      ;; Update mode line (ignoring `so-long-mode' which is already obvious).
-      (unless (and (symbolp so-long-function)
-                   (provided-mode-derived-p so-long-function 'so-long-mode))
+      ;; Display mode line info, unless we are in `so-long-mode' (which provides
+      ;; equivalent information in the mode line construct for the major mode).
+      (unless (derived-mode-p 'so-long-mode)
         (setq so-long-mode-line-info (so-long-mode-line-info)))
       ;; Run `so-long-hook'.
       ;; By default we set `buffer-read-only', which can cause problems if hook
