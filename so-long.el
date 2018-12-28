@@ -1005,17 +1005,11 @@ we set it buffer-locally to `so-long-revert-function-overrides-only'.
 
 If `so-long-function' has any value other than `so-long-mode', we do nothing, as
 if `so-long-file-local-mode-function' was nil."
-  ;; n.b. We use `provided-mode-derived-p' here, but we have no equivalent for
-  ;; the revert function, and therefore this may or may not be a valid downgrade
-  ;; function if we are dealing with a mode derived from `so-long-mode'.  (If it
-  ;; isn't valid, then a custom downgrade function should be used instead.)
   (when (and (symbolp (so-long-function))
              (provided-mode-derived-p (so-long-function) 'so-long-mode))
-    ;; Downgrade from `so-long-mode' to `so-long-function-overrides-only'.
-    (setq so-long-function 'so-long-function-overrides-only))
-  ;; Likewise, downgrade from `so-long-mode-revert'.
-  (when (eq (so-long-revert-function) 'so-long-mode-revert)
-    (setq so-long-revert-function 'so-long-revert-function-overrides-only)))
+    ;; Downgrade from `so-long-mode' to the `overrides-only' behaviour.
+    (setq so-long-function 'so-long-function-overrides-only
+          so-long-revert-function 'so-long-revert-function-overrides-only)))
 
 (defun so-long-inhibit (&optional _mode)
   "Prevent so-long from having any effect at all.
