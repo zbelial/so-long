@@ -548,7 +548,8 @@ they are in Emacs core, GNU ELPA, or elsewhere."
     (buffer-read-only . t)
     (global-hl-line-mode . nil)
     (line-move-visual . t)
-    (truncate-lines . nil))
+    (truncate-lines . nil)
+    (which-func-mode . nil))
   "Variables to override, and the values to override them with."
   :type '(alist :key-type (variable :tag "Variable")
                 :value-type (sexp :tag "Value"))
@@ -556,7 +557,8 @@ they are in Emacs core, GNU ELPA, or elsewhere."
              (buffer-read-only boolean)
              (global-hl-line-mode boolean)
              (line-move-visual boolean)
-             (truncate-lines boolean))
+             (truncate-lines boolean)
+             (which-func-mode boolean))
   :package-version '(so-long . "1.0")
   :group 'so-long)
 
