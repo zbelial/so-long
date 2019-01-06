@@ -703,6 +703,11 @@ Called during `change-major-mode-hook'."
             :enable (not (and so-long--active
                               (eq ',actionfunc so-long-function)
                               (eq ',revertfunc so-long-revert-function)))))))
+    ;; `customize-group'.
+    (define-key-after map [so-long-customize-separator]
+      '(menu-item "--"))
+    (define-key-after map [so-long-customize]
+      '(menu-item "Customize" so-long-customize))
     map))
 
 (defun so-long-menu-click-window ()
@@ -737,6 +742,11 @@ REPLACEMENT is a `so-long-action-alist' item."
       (setq so-long-revert-function revertfunc)
       (setq this-command 'so-long)
       (so-long))))
+
+(defun so-long-customize ()
+  "Open the so-long `customize' group."
+  (interactive)
+  (customize-group 'so-long))
 
 (defvar-local so-long-mode-line-info nil
   "Mode line construct displayed when `so-long' has been triggered.
