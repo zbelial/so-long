@@ -683,7 +683,8 @@ Called during `change-major-mode-hook'."
 (defun so-long-menu ()
   "Dynamically generate the \"So Long\" menu."
   ;; (info "(elisp) Menu Example")
-  (let ((map (make-sparse-keymap "So Long")))
+  (let ((map (make-sparse-keymap "So Long"))
+        (help-map (make-sparse-keymap "Help")))
     ;; `so-long-revert'.
     (define-key-after map [so-long-revert]
       '(menu-item "Revert to normal" so-long-menu-item-revert
@@ -703,10 +704,14 @@ Called during `change-major-mode-hook'."
             :enable (not (and so-long--active
                               (eq ',actionfunc so-long-function)
                               (eq ',revertfunc so-long-revert-function)))))))
-    ;; `customize-group'.
-    (define-key-after map [so-long-customize-separator]
+    ;; "Help" sub-menu.
+    (define-key-after map [so-long-help-separator]
       '(menu-item "--"))
-    (define-key-after map [so-long-customize]
+    (define-key-after map [so-long-help]
+      `(menu-item "Help" ,help-map))
+    (define-key-after help-map [so-long-commentary]
+      '(menu-item "Commentary" so-long-commentary))
+    (define-key-after help-map [so-long-customize]
       '(menu-item "Customize" so-long-customize))
     map))
 
@@ -747,6 +752,11 @@ REPLACEMENT is a `so-long-action-alist' item."
   "Open the so-long `customize' group."
   (interactive)
   (customize-group 'so-long))
+
+(defun so-long-commentary ()
+  "View the documentation."
+  (interactive)
+  (finder-commentary "so-long"))
 
 (defvar-local so-long-mode-line-info nil
   "Mode line construct displayed when `so-long' has been triggered.
