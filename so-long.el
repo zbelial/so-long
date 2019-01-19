@@ -1387,6 +1387,7 @@ Equivalent to calling (global-so-long-mode 1)"
   (interactive)
   (global-so-long-mode 1))
 
+(make-obsolete 'so-long-enable 'global-so-long-mode "so-long 1.0")
 (defun so-long-disable ()
   "Disable the so-long library's functionality.
 
@@ -1394,15 +1395,17 @@ Equivalent to calling (global-so-long-mode 0)"
   (interactive)
   (global-so-long-mode 0))
 
+(make-obsolete 'so-long-disable 'global-so-long-mode "so-long 1.0")
+
 (define-minor-mode global-so-long-mode
-  "Avoid performance issues in files with very long lines.
+  "Toggle performance mitigations for files with long lines.
 
 Many Emacs modes struggle with buffers which contain excessively long lines,
 and may consequently cause unacceptable performance issues.
 
-This is commonly on account of 'minified' code (i.e. code has been compacted
-into the smallest file size possible, which often entails removing newlines
-should they not be strictly necessary).
+This is commonly on account of 'minified' code (i.e. code that has been
+compacted into the smallest file size possible, which often entails removing
+newlines should they not be strictly necessary).
 
 When such files are detected, we invoke the selected `so-long-action' to
 mitigate potential performance problems in the buffer.
@@ -1463,7 +1466,7 @@ or call the function `global-so-long-mode'.")
   (setq so-long-enabled nil))
 
 (defun so-long-unload-function ()
-  (so-long-disable)
+  (global-so-long-mode 0)
   nil)
 
 (provide 'so-long)
