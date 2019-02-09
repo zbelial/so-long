@@ -964,12 +964,55 @@ This is a `so-long-function' option."
   (so-long-remember 'longlines-mode)
   (longlines-mode 1))
 
+(defun so-long-revert-function-longlines-mode ()
+  "Restore original state of `longlines-mode'."
+  (require 'longlines)
+  (let ((state (so-long-original 'longlines-mode :exists)))
+    (if state
+        (unless (equal (cadr state) longlines-mode)
+          (longlines-mode (if (cadr state) 1 -1)))
+      (longlines-mode -1))))
+
 (defun so-long-function-overrides-only ()
   "Disable minor modes and override variables, but retain the major mode.
 
 This is a `so-long-function' option."
+  ;;(so-long-minor-mode 1))
+  (setq-local so-long-minor-mode t)
   (so-long-disable-minor-modes)
   (so-long-override-variables))
+
+(defun so-long-revert-function-overrides-only ()
+  "Restore original state of the overridden minor modes and variables."
+  ;;(so-long-minor-mode -1))
+  (setq-local so-long-minor-mode nil)
+  (so-long-restore-minor-modes)
+  (so-long-restore-variables))
+
+(define-minor-mode so-long-minor-mode
+  "Equivalent to calling `so-long' with the `overrides-only' action."
+  nil nil nil
+  (if (not so-long-minor-mode)
+      (so-long-revert)
+    ;; Otherwise we are enabling the mode.
+    ;;
+    ;; If `so-long-minor-mode' has been invoked directly, we need to
+    ;; replicate the house-keeping that `so-long' usually takes care of.
+    (unless so-long--calling
+      (setq so-long--active t
+            so-long-detected-p t
+            so-long-original-values nil
+            so-long-function 'so-long-function-overrides-only
+            so-long-revert-function 'so-long-revert-function-overrides-only)
+      (dolist (ovar so-long-variable-overrides)
+        (so-long-remember (car ovar)))
+      (dolist (mode so-long-minor-modes)
+        (when (and (boundp mode) mode)
+          (so-long-remember mode)))
+      (unless (derived-mode-p 'so-long-mode)
+        (setq so-long-mode-line-info (so-long-mode-line-info))))
+    ;; Now perform the overrides.
+    (so-long-function-overrides-only)))
 
 ;; How do you solve a problem like a long line?
 ;; How do you stop a mode from slowing down?
@@ -1130,20 +1173,6 @@ Re-process local variables, and restore overridden variables and minor modes."
     ;; Restore the mode line construct.
     (unless (derived-mode-p 'so-long-mode)
       (setq so-long-mode-line-info (so-long-mode-line-info)))))
-
-(defun so-long-revert-function-overrides-only ()
-  "Restore original state of the overridden minor modes and variables."
-  (so-long-restore-minor-modes)
-  (so-long-restore-variables))
-
-(defun so-long-revert-function-longlines-mode ()
-  "Restore original state of `longlines-mode'."
-  (require 'longlines)
-  (let ((state (so-long-original 'longlines-mode :exists)))
-    (if state
-        (unless (equal (cadr state) longlines-mode)
-          (longlines-mode (if (cadr state) 1 -1)))
-      (longlines-mode -1))))
 
 (defun so-long-mode-downgrade (&optional _mode)
   "The default value for `so-long-file-local-mode-function'.
