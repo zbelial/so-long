@@ -1243,7 +1243,9 @@ function defined by `so-long-file-local-mode-function'."
                        (forward-char -1)
                      (goto-char end))
                    (skip-chars-backward " \t")
-                   (push (intern (concat (downcase (buffer-substring beg (point))) "-mode"))
+                   (push (intern (concat (downcase (buffer-substring
+                                                    beg (point)))
+                                         "-mode"))
                          modes)))
              ;; Simple -*-MODE-*- case.
              (push (intern (concat (downcase (buffer-substring (point) end))
