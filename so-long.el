@@ -86,16 +86,18 @@
 ;; Usage
 ;; -----
 ;; In most cases you will simply enable `global-so-long-mode' and leave it to
-;; act automatically as necessary.
+;; act automatically as required, in accordance with your configuration.
 ;;
-;; On rare occasions you may choose to manually invoke either the `so-long'
-;; command, or the major mode `so-long-mode'.  The former invokes your preferred
-;; `so-long-action', exactly as the automatic behaviour would do if it detected
-;; long lines.  You might use this if a problematic file was not recognised, and
-;; you wished to trigger the performance improvements manually.  The major mode
-;; `so-long-mode' is one of the actions available to `so-long' but, like any
-;; other major mode, it can also be invoked directly if you have a need to do
-;; that (see also "Other ways of using so-long" below).
+;; On rare occasions you may choose to manually invoke the `so-long' command,
+;; which invokes your preferred `so-long-action' (exactly as the automatic
+;; behaviour would do if it had detected long lines).  You might use this if a
+;; problematic file did not meet your configured criteria, and you wished to
+;; trigger the performance improvements manually.
+;;
+;; It is also possible to directly use `so-long-mode' or `so-long-minor-mode'
+;; (major and minor modes, respectively).  Both of these modes are actions
+;; available to `so-long' but, like any other mode, they can be invoked directly
+;; if you have a need to do that (see also "Other ways of using so-long" below).
 
 ;; Basic configuration
 ;; -------------------
@@ -1271,14 +1273,14 @@ function defined by `so-long-file-local-mode-function'."
   ;; (advice-add 'hack-local-variables :around #'so-long--hack-local-variables)
   "Ensure that `so-long' defers to file-local mode declarations if necessary.
 
+If a file-local mode is detected, then we call the function defined by
+`so-long-file-local-mode-function'.
+
 This advice acts after the HANDLE-MODE:t call to `hack-local-variables'.
 \(MODE-ONLY in Emacs versions < 26).
 
 File-local header comments are currently an exception, and are processed by
-`so-long-check-header-modes' (see which for details).
-
-If a file-local mode is detected, then we call the function defined by
-`so-long-file-local-mode-function'."
+`so-long-check-header-modes' (see which for details)."
   ;; The first arg to `hack-local-variables' is HANDLE-MODE since Emacs 26.1,
   ;; and MODE-ONLY in earlier versions.  In either case we are interested in
   ;; whether it has the value `t'.
