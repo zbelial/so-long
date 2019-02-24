@@ -470,9 +470,9 @@ Defaults to `so-long-detected-long-line-p'."
      so-long-mode
      so-long-mode-revert)
     (so-long-minor-mode
-     "Disable minor modes and override variables"
-     so-long-function-so-long-minor-mode
-     so-long-revert-function-so-long-minor-mode)
+     "Enable so-long-minor-mode"
+     turn-on-so-long-minor-mode
+     turn-off-so-long-minor-mode)
     (longlines-mode
      "Enable longlines-mode"
      so-long-function-longlines-mode
@@ -958,9 +958,7 @@ This is the default value of `so-long-predicate'."
           (setq count (1+ count)))))))
 
 (defun so-long-function-longlines-mode ()
-  "Enable minor mode `longlines-mode'.
-
-This is a `so-long-function' option."
+  "Enable minor mode `longlines-mode'."
   (require 'longlines)
   (so-long-remember 'longlines-mode)
   (longlines-mode 1))
@@ -974,46 +972,45 @@ This is a `so-long-function' option."
           (longlines-mode (if (cadr state) 1 -1)))
       (longlines-mode -1))))
 
-(defun so-long-function-so-long-minor-mode ()
-  "Disable minor modes and override variables, but retain the major mode.
+(defun turn-on-so-long-minor-mode ()
+  "Enable minor mode `so-long-minor-mode'."
+  (so-long-minor-mode 1))
 
-This is a `so-long-function' option."
-  ;;(so-long-minor-mode 1))
-  (setq-local so-long-minor-mode t)
-  (so-long-disable-minor-modes)
-  (so-long-override-variables))
-
-(defun so-long-revert-function-so-long-minor-mode ()
-  "Restore original state of the overridden minor modes and variables."
-  ;;(so-long-minor-mode -1))
-  (setq-local so-long-minor-mode nil)
-  (so-long-restore-minor-modes)
-  (so-long-restore-variables))
+(defun turn-off-so-long-minor-mode ()
+  "Disable minor mode `so-long-minor-mode'."
+  (so-long-minor-mode -1))
 
 (define-minor-mode so-long-minor-mode
-  "Equivalent to calling `so-long' with the `so-long-minor-mode' action."
+  "This is the minor mode equivalent of `so-long-mode'.
+
+Any active minor modes listed in `so-long-minor-modes' are disabled for the
+current buffer, and buffer-local values are assigned to variables in accordance
+with `so-long-variable-overrides'."
   nil nil nil
-  (if (not so-long-minor-mode)
-      (so-long-revert)
-    ;; Otherwise we are enabling the mode.
-    ;;
-    ;; If `so-long-minor-mode' has been invoked directly, we need to
-    ;; replicate the house-keeping that `so-long' usually takes care of.
-    (unless so-long--calling
-      (setq so-long--active t
-            so-long-detected-p t
-            so-long-original-values nil
-            so-long-function 'so-long-function-so-long-minor-mode
-            so-long-revert-function 'so-long-revert-function-so-long-minor-mode)
-      (dolist (ovar so-long-variable-overrides)
-        (so-long-remember (car ovar)))
-      (dolist (mode so-long-minor-modes)
-        (when (and (boundp mode) mode)
-          (so-long-remember mode)))
-      (unless (derived-mode-p 'so-long-mode)
-        (setq so-long-mode-line-info (so-long-mode-line-info))))
-    ;; Now perform the overrides.
-    (so-long-function-so-long-minor-mode)))
+  (if so-long-minor-mode ;; We are enabling the mode.
+      (progn
+        ;; Usually this happens via the `so-long' function; however if
+        ;; `so-long-minor-mode' has been invoked directly, then we need to
+        ;; replicate the house-keeping that `so-long' takes care of.
+        (unless so-long--calling
+          (setq so-long--active t
+                so-long-detected-p t
+                so-long-original-values nil
+                so-long-function 'turn-on-so-long-minor-mode
+                so-long-revert-function 'turn-off-so-long-minor-mode)
+          (dolist (ovar so-long-variable-overrides)
+            (so-long-remember (car ovar)))
+          (dolist (mode so-long-minor-modes)
+            (when (and (boundp mode) mode)
+              (so-long-remember mode)))
+          (unless (derived-mode-p 'so-long-mode)
+            (setq so-long-mode-line-info (so-long-mode-line-info))))
+        ;; Now perform the overrides.
+        (so-long-disable-minor-modes)
+        (so-long-override-variables))
+    ;; We are disabling the mode.
+    (so-long-restore-minor-modes)
+    (so-long-restore-variables)))
 
 ;; How do you solve a problem like a long line?
 ;; How do you stop a mode from slowing down?
@@ -1181,7 +1178,7 @@ Re-process local variables, and restore overridden variables and minor modes."
 A buffer-local 'downgrade' from `so-long-mode' to `so-long-minor-mode'.
 
 When `so-long-function' is set to `so-long-mode', then we change it to to
-`so-long-function-so-long-minor-mode' instead -- retaining the file-local major
+`turn-on-so-long-minor-mode' instead -- retaining the file-local major
 mode, but still doing everything else that `so-long-mode' would have done.
 `so-long-revert-function' is likewise updated.
 
@@ -1190,8 +1187,8 @@ as if `so-long-file-local-mode-function' was nil."
   (when (and (symbolp (so-long-function))
              (provided-mode-derived-p (so-long-function) 'so-long-mode))
     ;; Downgrade from `so-long-mode' to the `so-long-minor-mode' behaviour.
-    (setq so-long-function 'so-long-function-so-long-minor-mode
-          so-long-revert-function 'so-long-revert-function-so-long-minor-mode)))
+    (setq so-long-function 'turn-on-so-long-minor-mode
+          so-long-revert-function 'turn-off-so-long-minor-mode)))
 
 (defun so-long-inhibit (&optional _mode)
   "Prevent so-long from having any effect at all.
