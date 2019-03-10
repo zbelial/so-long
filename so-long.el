@@ -987,6 +987,7 @@ This is the default value of `so-long-predicate'."
   "Disable minor mode `so-long-minor-mode'."
   (so-long-minor-mode -1))
 
+;;;###autoload
 (define-minor-mode so-long-minor-mode
   "This is the minor mode equivalent of `so-long-mode'.
 
@@ -1050,6 +1051,7 @@ This minor mode is a standard `so-long-action' option."
     map)
   "Major mode keymap and menu for `so-long-mode'.")
 
+;;;###autoload
 (define-derived-mode so-long-mode nil "So Long"
   "This major mode is the default `so-long-action' option.
 
@@ -1461,6 +1463,7 @@ Equivalent to calling (global-so-long-mode 0)"
 (make-obsolete 'so-long-enable 'global-so-long-mode "so-long 1.0")
 (make-obsolete 'so-long-disable 'global-so-long-mode "so-long 1.0")
 
+;;;###autoload
 (define-minor-mode global-so-long-mode
   "Toggle automated performance mitigations for files with long lines.
 
