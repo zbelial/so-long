@@ -783,7 +783,11 @@ even when invoked interactively.
 Called during `change-major-mode-hook'."
   (unless (or (minibufferp)
               (derived-mode-p 'so-long-mode))
-    (so-long-remember 'major-mode)))
+    (so-long-remember 'major-mode)
+    ;; Housekeeping.  `so-long-minor-mode' might be invoked directly rather than
+    ;; via `so-long', so replicate the necessary behaviours.
+    (when (eq this-command 'so-long-mode)
+      (so-long-remember-all))))
 
 (defun so-long-menu ()
   "Dynamically generate the \"So Long\" menu."
@@ -1088,10 +1092,15 @@ values), despite potential performance issues, type \\[so-long-mode-revert]."
           so-long-detected-p t
           so-long-function 'so-long-mode
           so-long-revert-function 'so-long-mode-revert)
-    ;; Reset `so-long-original-values' with the exception of `major-mode'
-    ;; which has just been stored by `so-long-change-major-mode'.
-    (let ((major (so-long-original 'major-mode :exists)))
-      (setq so-long-original-values (if major (list major) nil))))
+    ;; Reset `so-long-original-values' with the exception of `major-mode' which
+    ;; has just been stored by `so-long-change-major-mode'.  If we are directly
+    ;; invoking `so-long-mode' interactively then that `change-major-mode-hook'
+    ;; function additionally stored all the original values, and we do not want
+    ;; to clobber any of them.
+    (unless (eq this-command 'so-long-mode)
+      (let ((major (so-long-original 'major-mode :exists)))
+        (setq so-long-original-values
+              (if major (list major) nil)))))
   ;; Use `after-change-major-mode-hook' to disable minor modes and override
   ;; variables, so that we act after any globalized modes have acted.
   (add-hook 'after-change-major-mode-hook
