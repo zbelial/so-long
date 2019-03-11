@@ -1079,11 +1079,12 @@ values), despite potential performance issues, type \\[so-long-mode-revert]."
   (unless so-long--calling
     (setq so-long--active t
           so-long-detected-p t
-          so-long-original-values nil
           so-long-function 'so-long-mode
-          so-long-revert-function 'so-long-mode-revert))
-  (unless (so-long-original 'major-mode)
-    (so-long-remember 'major-mode))
+          so-long-revert-function 'so-long-mode-revert)
+    ;; Reset `so-long-original-values' with the exception of `major-mode'
+    ;; which has just been stored by `so-long-change-major-mode'.
+    (let ((major (so-long-original 'major-mode :exists)))
+      (setq so-long-original-values (if major (list major) nil))))
   ;; Use `after-change-major-mode-hook' to disable minor modes and override
   ;; variables, so that we act after any globalized modes have acted.
   (add-hook 'after-change-major-mode-hook
