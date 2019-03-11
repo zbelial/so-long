@@ -790,7 +790,8 @@ Called during `change-major-mode-hook'."
               (derived-mode-p 'so-long-mode))
     ;; Housekeeping.  `so-long-minor-mode' might be invoked directly rather than
     ;; via `so-long', so replicate the necessary behaviours.
-    (when (eq this-command 'so-long-mode)
+    (when (and (symbolp this-command)
+               (provided-mode-derived-p this-command 'so-long-mode))
       (so-long-remember-all :reset))
     ;; Remember the original major mode.
     (so-long-remember 'major-mode)))
@@ -1104,7 +1105,8 @@ values), despite potential performance issues, type \\[so-long-mode-revert]."
     ;; invoking `so-long-mode' interactively then that `change-major-mode-hook'
     ;; function additionally stored all the original values, and we do not want
     ;; to clobber any of them.
-    (unless (eq this-command 'so-long-mode)
+    (unless (and (symbolp this-command)
+                 (provided-mode-derived-p this-command 'so-long-mode))
       (let ((major (so-long-original 'major-mode :exists)))
         (setq so-long-original-values
               (if major (list major) nil)))))
@@ -1122,7 +1124,10 @@ values), despite potential performance issues, type \\[so-long-mode-revert]."
   ;; Inform the user about our major mode hijacking.
   (unless (or so-long--inhibited so-long--set-auto-mode)
     (message (concat "Changed to %s (from %s)"
-                     (unless (memq this-command '(so-long so-long-mode))
+                     (unless (or (eq this-command 'so-long)
+                                 (and (symbolp this-command)
+                                      (provided-mode-derived-p this-command
+                                                               'so-long-mode)))
                        " on account of line length")
                      ".  %s to revert.")
              major-mode
