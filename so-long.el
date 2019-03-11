@@ -720,11 +720,13 @@ If nil, no mode line indicator will be displayed."
 (defface so-long-mode-line-active
   '((t :inherit mode-line-emphasis))
   "Face for `so-long-mode-line-info' when mitigations are active."
+  :package-version '(so-long . "1.0")
   :group 'so-long)
 
 (defface so-long-mode-line-inactive
   '((t :inherit mode-line-inactive))
   "Face for `so-long-mode-line-info' when mitigations have been reverted."
+  :package-version '(so-long . "1.0")
   :group 'so-long)
 
 ;; Modes that go slowly and line lengths excessive
