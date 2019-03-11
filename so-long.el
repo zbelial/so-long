@@ -765,11 +765,13 @@ nil if no value was set, and a cons cell otherwise."
                 (consp (assq variable (buffer-local-variables))))
           so-long-original-values)))
 
-(defun so-long-remember-all ()
+(defun so-long-remember-all (&optional reset)
   "Remember the current variable and minor mode values.
 
 Stores the existing values for each entry in `so-long-variable-overrides' and
 `so-long-minor-modes'."
+  (when reset
+    (setq so-long-original-values nil))
   (dolist (ovar so-long-variable-overrides)
     (so-long-remember (car ovar)))
   (dolist (mode so-long-minor-modes)
@@ -1022,8 +1024,7 @@ This minor mode is a standard `so-long-action' option."
                 so-long-detected-p t
                 so-long-function 'turn-on-so-long-minor-mode
                 so-long-revert-function 'turn-off-so-long-minor-mode)
-          (setq so-long-original-values nil)
-          (so-long-remember-all)
+          (so-long-remember-all :reset)
           (unless (derived-mode-p 'so-long-mode)
             (setq so-long-mode-line-info (so-long-mode-line-info))))
         ;; Now perform the overrides.
@@ -1236,6 +1237,7 @@ This is a `so-long-file-local-mode-function' option."
   (setq so-long--inhibited t))
 
 (defun so-long--check-header-modes ()
+  ;; See also "Files with a file-local 'mode'" in the Commentary.
   "Handles the header-comments processing in `set-auto-mode'.
 
 `set-auto-mode' has some special-case code to handle the 'mode' pseudo-variable
@@ -1416,8 +1418,7 @@ argument, select the action to use interactively."
       (unless so-long-revert-function
         (setq so-long-revert-function (so-long-revert-function action)))
       ;; Remember original settings.
-      (setq so-long-original-values nil)
-      (so-long-remember-all)
+      (so-long-remember-all :reset)
       ;; Call the configured `so-long-function'.
       (when so-long-function
         (funcall so-long-function)
