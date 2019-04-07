@@ -85,6 +85,20 @@
 ;; that the library has been loaded.  (These steps are not necessary if you are
 ;; using Emacs 27+, or have installed the GNU ELPA package.)
 
+;; Overview of modes and commands
+;; ------------------------------
+;; * `global-so-long-mode' - A global minor mode which enables the automated
+;;   behaviour, causing the user's preferred action to be invoked whenever a
+;;   newly-visited file contains excessively long lines.
+;; * `so-long-mode' - A major mode; the default `so-long-action'.
+;; * `so-long-minor-mode' - A minor mode version of the major mode, and an
+;;   alternative action.
+;; * `longlines-mode' - A minor mode provided by the longlines.el library,
+;;   and another alternative action.
+;; * `so-long' - A command to manually invoke the user's preferred action,
+;;   instigating performance improvements for the current buffer.
+;; * `so-long-revert' - A command to restore the original state of the buffer.
+
 ;; Usage
 ;; -----
 ;; In most cases you will simply enable `global-so-long-mode' and leave it to
@@ -101,6 +115,9 @@
 ;; (major and minor modes, respectively).  Both of these modes are actions
 ;; available to `so-long' but, like any other mode, they can be invoked directly
 ;; if you have a need to do that (see also "Other ways of using so-long" below).
+;;
+;; If the behaviour ever triggers in an undesirable situation, you can use the
+;; `so-long-revert' command to restore the buffer to its original state.
 
 ;; Basic configuration
 ;; -------------------
@@ -114,8 +131,10 @@
 ;; -----------------
 ;; The user options `so-long-action' and `so-long-action-alist' determine what
 ;; will happen when `so-long' and `so-long-revert' are invoked, and you can add
-;; your own custom actions if you wish.  The action can be invoked manually with
-;; M-x so-long.
+;; your own custom actions if you wish.  The selected action can be invoked
+;; manually with M-x so-long; and in general M-x so-long-revert will undo the
+;; effects of whichever action was used (which is particularly useful when the
+;; action is triggered automatically, but the detection was a 'false positive'.)
 ;;
 ;; All defined actions are presented in the "So Long" menu, which is visible
 ;; whenever long lines have been detected.  Selecting an action from the menu
