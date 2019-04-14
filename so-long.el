@@ -885,10 +885,32 @@ REPLACEMENT is a `so-long-action-alist' item."
 
 ;;;###autoload
 (defun so-long-commentary ()
-  "View the so-long documentation using `finder-commentary'."
+  "View the so-long documentation."
   (interactive)
-  (finder-commentary "so-long")
-  (outline-minor-mode 1))
+  (let ((buf "*So Long: Commentary*"))
+    (when (buffer-live-p (get-buffer buf))
+      (kill-buffer buf))
+    ;; Use `finder-commentary' to generate the buffer.
+    (require 'finder)
+    (cl-letf (((symbol-function 'finder-summary) #'ignore))
+      (finder-commentary "so-long"))
+    (when (looking-at "^Commentary:\n\n")
+      (let ((inhibit-read-only t))
+        (replace-match "so-long.el\n\n")))
+    (rename-buffer buf)
+    ;; Enable `outline-mode' and `view-mode' for user convenience.
+    (outline-mode)
+    (view-mode 1)
+    ;; Add some custom local bindings.
+    (let ((map (make-sparse-keymap)))
+      (define-key map (kbd "TAB") #'outline-toggle-children)
+      (define-key map (kbd "M-n") #'outline-next-visible-heading)
+      (define-key map (kbd "M-p") #'outline-previous-visible-heading)
+      (set-keymap-parent map (current-local-map))
+      (use-local-map map))
+    ;; Display the So Long menu.
+    (let ((so-long-action nil))
+      (so-long))))
 
 ;;;###autoload
 (defun so-long-customize ()
