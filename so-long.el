@@ -804,13 +804,16 @@ nil if no value was set, and a cons cell otherwise."
     (cadr (assq key so-long-original-values))))
 
 (defun so-long-remember (variable)
-  "Push the `symbol-value' for VARIABLE to `so-long-original-values'."
+  "Store the value of VARIABLE in `so-long-original-values'.
+
+We additionally store a boolean value which indicates whether that value was
+buffer-local."
   (when (boundp variable)
     (setq so-long-original-values
           (assq-delete-all variable so-long-original-values))
     (push (list variable
                 (symbol-value variable)
-                (consp (assq variable (buffer-local-variables))))
+                (local-variable-p variable))
           so-long-original-values)))
 
 (defun so-long-remember-all (&optional reset)
