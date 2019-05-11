@@ -849,9 +849,13 @@ If RESET is non-nil, remove any existing values before storing the new ones."
           item
         (define-key-after map (vector key)
           `(menu-item
-            ,label (lambda ()
-                     (interactive)
-                     (so-long-menu-item-replace-action ',item))
+            ,label
+            ,(let ((sym (make-symbol "so-long-menu-item-replace-action")))
+               (defalias sym
+                 (apply-partially #'so-long-menu-item-replace-action item)
+                 (documentation #'so-long-menu-item-replace-action))
+               (put sym 'interactive-form '(interactive))
+               sym)
             :enable (not (and so-long--active
                               (eq ',actionfunc so-long-function)
                               (eq ',revertfunc so-long-revert-function)))))))
