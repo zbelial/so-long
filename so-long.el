@@ -2,6 +2,12 @@
 ;;
 ;; Copyright (C) 2015, 2016, 2018, 2019 Free Software Foundation, Inc.
 
+
+;; FIXME:
+;; In 25.3 I'm getting a test failure for -*- mode: so-long -*-
+;; (but *not* for -*- so-long -*-, which is fascinating.)
+
+
 ;; Author: Phil Sainty <psainty@orcon.net.nz>
 ;; Maintainer: Phil Sainty <psainty@orcon.net.nz>
 ;; URL: https://savannah.nongnu.org/projects/so-long
@@ -411,6 +417,12 @@ Has no effect if `global-so-long-mode' is not enabled.")
 
 (defvar so-long--set-auto-mode nil ; internal use
   "Non-nil while `set-auto-mode' is executing.")
+
+(defvar so-long--hack-local-variables nil ; internal use
+  "Non-nil while `hack-local-variables' is executing.")
+
+(defvar so-long--revert-hlv nil ; internal use
+  "Non-nil when `hack-local-variables' is called by `so-long-mode-revert'.")
 
 (defvar-local so-long--inhibited nil ; internal use
   "When non-nil, prevents the `set-auto-mode' advice from calling `so-long'.")
@@ -1199,7 +1211,10 @@ Use \\[so-long-customize] to configure the behaviour."
   ;; Hide redundant mode-line information (our major mode info replicates this).
   (setq so-long-mode-line-info nil)
   ;; Inform the user about our major mode hijacking.
-  (unless (or so-long--inhibited so-long--set-auto-mode)
+  (unless (or so-long--inhibited
+              so-long--set-auto-mode
+              ;;so-long--hack-local-variables
+              )
     (message (concat "Changed to %s (from %s)"
                      (unless (or (eq this-command 'so-long)
                                  (and (symbolp this-command)
@@ -1309,7 +1324,8 @@ This is the `so-long-revert-function' for `so-long-mode'."
     ;; Emacs 26+ has already called `hack-local-variables' (during
     ;; `run-mode-hooks'), but for older versions we need to call it here.
     (when (< emacs-major-version 26)
-      (hack-local-variables))
+      (let ((so-long--revert-hlv t))
+        (hack-local-variables)))
     ;; Restore minor modes.
     (so-long-restore-minor-modes)
     ;; Restore overridden variables.
@@ -1430,11 +1446,12 @@ File-local header comments are currently an exception, and are processed by
   ;; The first arg to `hack-local-variables' is HANDLE-MODE since Emacs 26.1,
   ;; and MODE-ONLY in earlier versions.  In either case we are interested in
   ;; whether it has the value `t'.
-  (let ((retval (apply orig-fun handle-mode args)))
-    (and (eq handle-mode t)
-         retval ; A file-local mode was set.
-         (so-long-handle-file-local-mode retval))
-    retval))
+  (let ((so-long--hack-local-variables t))
+    (let ((retval (apply orig-fun handle-mode args)))
+      (and (eq handle-mode t)
+           retval ; A file-local mode was set.
+           (so-long-handle-file-local-mode retval))
+      retval)))
 
 (defun so-long--set-auto-mode (orig-fun &rest args)
   ;; Advice, enabled with:
@@ -1479,6 +1496,10 @@ by testing the value against `major-mode'; but as we may have changed the
 major mode to `so-long-mode' by this point, that protection is insufficient
 and so we need to perform our own test.
 
+We likewise need to deal with `so-long-mode-revert' after visiting a buffer
+with 'mode: so-long-mode', as otherwise we will restore that file-local mode
+again after reverting to the original mode.
+
 The changes to `normal-mode' in Emacs 26.1 modified the execution order, and
 makes this advice unnecessary.  The relevant NEWS entry is:
 
@@ -1489,8 +1510,9 @@ These local variables will thus not vanish on setting a major mode."
       ;; Adapted directly from `hack-one-local-variable'
       (let ((mode (intern (concat (downcase (symbol-name val))
                                   "-mode"))))
-        (unless (eq (indirect-function mode)
-                    (indirect-function (so-long-original 'major-mode)))
+        (unless (or so-long--revert-hlv
+                    (eq (indirect-function mode)
+                        (indirect-function (so-long-original 'major-mode))))
           (funcall orig-fun var val)))
     ;; VAR is not the 'mode' pseudo-variable.
     (funcall orig-fun var val)))
