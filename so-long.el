@@ -670,11 +670,11 @@ was established."
   ;; Handle the special case whereby the file-local mode was `so-long-mode'.
   ;; In this instance we set `so-long--inhibited', because the file-local mode
   ;; is already going to do everything that is wanted.
-  (if (provided-mode-derived-p mode 'so-long-mode)
-      (setq so-long--inhibited t)
-    ;; Call `so-long-file-local-mode-function'.
-    (when so-long-file-local-mode-function
-      (funcall so-long-file-local-mode-function mode))))
+  (when (provided-mode-derived-p mode 'so-long-mode)
+    (setq so-long--inhibited t))
+  ;; Call `so-long-file-local-mode-function'.
+  (when so-long-file-local-mode-function
+    (funcall so-long-file-local-mode-function mode)))
 
 (defcustom so-long-minor-modes
   ;; In sorted groups.
@@ -1329,7 +1329,7 @@ This is the `so-long-revert-function' for `so-long-mode'."
     (unless (derived-mode-p 'so-long-mode)
       (setq so-long-mode-line-info (so-long-mode-line-info)))))
 
-(defun so-long-mode-downgrade (&optional _mode)
+(defun so-long-mode-downgrade (&optional mode)
   "The default value for `so-long-file-local-mode-function'.
 
 A buffer-local 'downgrade' from `so-long-mode' to `so-long-minor-mode'.
@@ -1340,12 +1340,16 @@ mode, but still doing everything else that `so-long-mode' would have done.
 `so-long-revert-function' is likewise updated.
 
 If `so-long-function' has any value other than `so-long-mode', we do nothing,
-as if `so-long-file-local-mode-function' was nil."
-  (when (and (symbolp (so-long-function))
-             (provided-mode-derived-p (so-long-function) 'so-long-mode))
-    ;; Downgrade from `so-long-mode' to the `so-long-minor-mode' behaviour.
-    (setq so-long-function 'turn-on-so-long-minor-mode
-          so-long-revert-function 'turn-off-so-long-minor-mode)))
+as if `so-long-file-local-mode-function' was nil.
+
+We also do nothing if MODE (the file-local mode) has the value `so-long-mode',
+because we do not want to downgrade the major mode in that scenario."
+  (unless (provided-mode-derived-p mode 'so-long-mode)
+    (when (and (symbolp (so-long-function))
+               (provided-mode-derived-p (so-long-function) 'so-long-mode))
+      ;; Downgrade from `so-long-mode' to the `so-long-minor-mode' behaviour.
+      (setq so-long-function 'turn-on-so-long-minor-mode
+            so-long-revert-function 'turn-off-so-long-minor-mode))))
 
 (defun so-long-inhibit (&optional _mode)
   "Prevent so-long from having any effect at all.
