@@ -641,9 +641,9 @@ If nil, then do not treat files with file-local modes any differently to other
 files.
 
 Note that this function is called if a file-local mode is set even if `so-long'
-will not be called.  The exception to this is when the file-local mode is
-`so-long-mode', in which case `so-long-file-local-mode-function' is ignored,
-as the required action is unambiguous."
+will not be called, and also if the file-local mode is `so-long-mode'.  Custom
+functions should generally test for these cases -- see `so-long-mode-downgrade'
+for an example."
   :type '(radio (const so-long-mode-downgrade)
                 (const so-long-inhibit)
                 (const :tag "nil: Use so-long-function as normal" nil)
@@ -1344,7 +1344,10 @@ as if `so-long-file-local-mode-function' was nil.
 
 We also do nothing if MODE (the file-local mode) has the value `so-long-mode',
 because we do not want to downgrade the major mode in that scenario."
-  (unless (provided-mode-derived-p mode 'so-long-mode)
+  ;; Do nothing if the file-local mode was `so-long-mode'.
+  (unless (and (symbolp mode)
+               (provided-mode-derived-p mode 'so-long-mode))
+    ;; Act only if `so-long-mode' would be enabled by the current action.
     (when (and (symbolp (so-long-function))
                (provided-mode-derived-p (so-long-function) 'so-long-mode))
       ;; Downgrade from `so-long-mode' to the `so-long-minor-mode' behaviour.
